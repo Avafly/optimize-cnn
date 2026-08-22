@@ -34,3 +34,6 @@ add_compile_definitions(FMT_HEADER_ONLY)
 
 add_executable(cnn_ncnn src/cnn_ncnn.cpp)
 target_link_libraries(cnn_ncnn PRIVATE ncnn OpenMP::OpenMP_CXX)
+
+add_executable(cnn_ort src/cnn_ort.cpp)
+target_link_libraries(cnn_ort PRIVATE onnxruntime::onnxruntime)
