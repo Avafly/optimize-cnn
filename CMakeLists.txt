@@ -37,3 +37,9 @@ target_link_libraries(cnn_ncnn PRIVATE ncnn OpenMP::OpenMP_CXX)
 
 add_executable(cnn_ort src/cnn_ort.cpp)
 target_link_libraries(cnn_ort PRIVATE onnxruntime::onnxruntime)
+
+add_executable(cnn_struct src/cnn_struct.cpp)
+target_include_directories(cnn_struct PRIVATE ${OPENBLAS_INCLUDE_DIR})
+target_link_directories(cnn_struct PRIVATE ${OPENBLAS_LIB_DIR})
+target_link_libraries(cnn_struct PRIVATE -lopenblas OpenMP::OpenMP_CXX -lm)
+target_compile_options(cnn_struct PRIVATE -funsafe-math-optimizations -mcpu=native)
