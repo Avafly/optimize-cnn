@@ -49,3 +49,7 @@ target_include_directories(cnn_const PRIVATE ${OPENBLAS_INCLUDE_DIR})
 target_link_directories(cnn_const PRIVATE ${OPENBLAS_LIB_DIR})
 target_link_libraries(cnn_const PRIVATE -lopenblas OpenMP::OpenMP_CXX -lm)
 target_compile_options(cnn_const PRIVATE -funsafe-math-optimizations -mcpu=native)
+
+add_executable(cnn_neon src/cnn_neon.cpp)
+target_link_libraries(cnn_neon PRIVATE OpenMP::OpenMP_CXX -lm)
+target_compile_options(cnn_neon PRIVATE -funsafe-math-optimizations -mcpu=native)
