@@ -53,3 +53,7 @@ target_compile_options(cnn_const PRIVATE -funsafe-math-optimizations -mcpu=nativ
 add_executable(cnn_neon src/cnn_neon.cpp)
 target_link_libraries(cnn_neon PRIVATE OpenMP::OpenMP_CXX -lm)
 target_compile_options(cnn_neon PRIVATE -funsafe-math-optimizations -mcpu=native)
+
+add_executable(cnn_fuse src/cnn_fuse.cpp)
+target_link_libraries(cnn_fuse PRIVATE OpenMP::OpenMP_CXX -lm)
+target_compile_options(cnn_fuse PRIVATE -funsafe-math-optimizations -mcpu=native)
