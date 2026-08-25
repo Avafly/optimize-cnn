@@ -32,6 +32,9 @@ int main(int argc, char *argv[])
     ncnn::Net net;
     net.opt.num_threads = 1;
     net.opt.use_packing_layout = false;
+    net.opt.use_fp16_packed = false;
+    net.opt.use_fp16_storage = false;
+    net.opt.use_fp16_arithmetic = false;
     if (net.load_param(args.path("ncnn/model.ncnn.param").c_str()) ||
         net.load_model(args.path("ncnn/model.ncnn.bin").c_str()))
     {
@@ -39,19 +42,26 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    static ncnn::UnlockedPoolAllocator blob_pool[optcnn::MAX_THREADS];
+    static ncnn::UnlockedPoolAllocator workspace_pool[optcnn::MAX_THREADS];
+
     // run inference
+    const int threads = args.threads < optcnn::MAX_THREADS ? args.threads : optcnn::MAX_THREADS;
     const optcnn::Timing t = optcnn::run_timed(args.runs, [&] {
         for (int base = 0; base < optcnn::NUM_IMAGES; base += optcnn::BATCH)
         {
             const int count = optcnn::NUM_IMAGES - base < optcnn::BATCH ? optcnn::NUM_IMAGES - base
                                                                         : optcnn::BATCH;
-            #pragma omp parallel for num_threads(args.threads) schedule(static)
+            #pragma omp parallel for num_threads(threads) schedule(static)
             for (int j = 0; j < count; ++j)
             {
+                const int tid = omp_get_thread_num();
                 const std::size_t i = static_cast<std::size_t>(base) + j;
                 ncnn::Mat in(optcnn::IMG_W, optcnn::IMG_H, Inputs + i * optcnn::IMG_SIZE);
                 ncnn::Mat out;
                 ncnn::Extractor ex = net.create_extractor();
+                ex.set_blob_allocator(&blob_pool[tid]);
+                ex.set_workspace_allocator(&workspace_pool[tid]);
                 if (ex.input("in0", in) != 0 || ex.extract("out0", out) != 0)
                     continue;
                 std::memcpy(Logits + i * optcnn::NUM_CLASSES, out.data,
