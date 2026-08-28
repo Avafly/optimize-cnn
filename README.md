@@ -67,6 +67,20 @@ Max pooling is moved ahead of the activation since `leaky(max(x)) == max(leaky(x
 
 Then convolution, 2x2 max pooling and the activation become a single kernel: two conv output rows are kept in registers and pooled there, so the conv output never reaches memory. According to the measurement, the activation has to be applied while the pooled value is still in a register: left as a separate pass over the pooled buffer it costs 220 ms, against 14 ms for the same pass after the unfused pool. [cnn_fuse](https://github.com/Avafly/optimize-cnn/blob/main/src/cnn_fuse.cpp) reaches 783 ms.
 
+## How to run
+
+```bash
+$ ./build/cnn_fuse 
+Usage: ./build/cnn_fuse [data_dir] [--threads T] [--runs N]
+  data_dir   dir with images.bin/ref_logits.bin (default: data)
+  --threads  worker threads (default: 1)
+  --runs     timed runs, best/mean/worst reported (default: 1)
+
+Examples:
+  ./build/cnn_fuse --threads 2
+  ./build/cnn_fuse /path/to/data --threads 4 --runs 30
+```
+
 ## References
 
 https://github.com/Avafly/optimize-gemm
