@@ -94,16 +94,25 @@ void load_data(const std::string &path, T *buf, std::size_t size)
 inline void print_usage(const char *exe)
 {
     fmt::print(stderr,
-               "Usage: {} [data_dir] [--threads T] [--runs N]\n"
-               "  data_dir   dir with images.bin/ref_logits.bin (default: {})\n"
-               "  --threads  worker threads (default: {})\n"
-               "  --runs     timed runs, best/mean/worst reported (default: {})\n",
+               "Usage: {0} [data_dir] [--threads T] [--runs N]\n"
+               "  data_dir   dir with images.bin/ref_logits.bin (default: {1})\n"
+               "  --threads  worker threads (default: {2})\n"
+               "  --runs     timed runs, best/mean/worst reported (default: {3})\n"
+               "\n"
+               "Examples:\n"
+               "  {0} --threads 2\n"
+               "  {0} /path/to/data --threads 4 --runs 30\n",
                exe, DATA_DIR, DEFAULT_THREADS, DEFAULT_RUNS);
 }
 
 inline Args parse_args(int argc, char **argv)
 {
     Args a;
+    if (argc == 1)
+    {
+        print_usage(argv[0]);
+        std::exit(0);
+    }
     bool got_dir = false;
     for (int i = 1; i < argc; ++i)
     {
