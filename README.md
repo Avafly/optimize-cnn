@@ -1,6 +1,6 @@
 # optimize-cnn
 
-We sometimes need to run the AI models on devices with very limited resources. Many inference frameworks, e.g., [ORT](https://github.com/microsoft/onnxruntime) and [ncnn](https://github.com/Tencent/ncnn), perform well for larger models but fall short with small models: their optimizations for large models do not always benefit smaller ones (small/flat GEMMs, small convolutions with few channels, ...), and performance is traded away for generality.
+We sometimes need to run the AI models on devices with very limited resources. Many inference frameworks (e.g., [ORT](https://github.com/microsoft/onnxruntime), [ncnn](https://github.com/Tencent/ncnn), [TFLite](https://github.com/tensorflow/tensorflow)) perform well for larger models but fall short with small models: their optimizations for large models do not always benefit smaller ones (small/flat GEMMs, small convolutions with few channels, ...), and performance is traded away for generality.
 
 This repo shows a tiny CNN implementation for recognizing fashion mnist. Simple, powerful enough, while extremely fast. In most real projects the hardware specs are known and the model architecture is fixed, which leaves a lot of room to optimize, and a tiny model means hand writing it is not much work. **As long as the model is small, the implementation is worth considering.**
 
@@ -26,14 +26,17 @@ Each inference run recognizes 70,000 images. After one warmup it runs `--runs` t
 |    cnn_ncnn    |              2302 ms               |
 | **cnn_struct** |            **2116 ms**             |
 | **cnn_const**  |            **1736 ms**             |
+|   cnn_tflite   |              1621 ms               |
 |  **cnn_neon**  |            **1045 ms**             |
 |  **cnn_fuse**  |             **783 ms**             |
 
 ## Optimization
 
-### cnn_ort & cnn_ncnn
+### cnn_ort, cnn_ncnn, cnn_tflite
 
-Both framework implementations were tuned rather than left at their defaults. In [ncnn](https://github.com/Avafly/optimize-cnn/blob/main/src/cnn_ncnn.cpp), each thread gets its own allocator instead of sharing the default pool, and fp16 and pack are disabled (tested faster). In [ORT](https://github.com/Avafly/optimize-cnn/blob/main/src/cnn_ort.cpp), the best-performing input tensor shape was chosen and graph optimization enabled. Both land around 2300~2400 ms at 4 threads. That is the baseline.
+The framework implementations were tuned rather than left at their defaults. In [ncnn](https://github.com/Avafly/optimize-cnn/blob/main/src/cnn_ncnn.cpp), each thread gets its own allocator instead of sharing the default pool, and fp16 and pack are disabled (tested faster). In [ORT](https://github.com/Avafly/optimize-cnn/blob/main/src/cnn_ort.cpp), the best-performing input tensor shape was chosen and graph optimization enabled. In [TFLite](https://github.com/Avafly/optimize-cnn/blob/main/src/cnn_tflite.cpp), each thread gets its own interpreter instead of sharing one (tested faster).
+
+ORT and ncnn land around 2300~2400 ms at 4 threads, and TFLite reaches 1621 ms.
 
 ### cnn_struct
 
@@ -70,15 +73,15 @@ Then convolution, 2x2 max pooling and the activation become a single kernel: two
 ## How to run
 
 ```bash
-$ ./build/cnn_fuse 
-Usage: ./build/cnn_fuse [data_dir] [--threads T] [--runs N]
+$ ./cnn_fuse 
+Usage: ./cnn_fuse [data_dir] [--threads T] [--runs N]
   data_dir   dir with images.bin/ref_logits.bin (default: data)
   --threads  worker threads (default: 1)
   --runs     timed runs, best/mean/worst reported (default: 1)
 
 Examples:
-  ./build/cnn_fuse --threads 2
-  ./build/cnn_fuse /path/to/data --threads 4 --runs 30
+  ./cnn_fuse --threads 2
+  ./cnn_fuse /path/to/data --threads 4 --runs 30
 ```
 
 ## Dependencies
@@ -87,6 +90,7 @@ Examples:
 | :----------: | :------: |
 | ONNX Runtime |  1.27.1  |
 |     ncnn     | 20260526 |
+|    TFLite    |  2.20.0  |
 |     fmt      |  12.2.1  |
 
 ## References
