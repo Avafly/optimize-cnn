@@ -29,6 +29,9 @@ if(NOT DEFINED onnxruntime_DIR)
     set(onnxruntime_DIR "${LIB_ROOT}/onnxruntime/lib/cmake/onnxruntime")
 endif()
 find_package(onnxruntime REQUIRED)
+# tflite
+set(TFLITE_INCLUDE_DIR "${LIB_ROOT}/tflite/include")
+set(TFLITE_LIB_DIR "${LIB_ROOT}/tflite/lib")
 
 add_compile_definitions(FMT_HEADER_ONLY)
 
@@ -37,6 +40,12 @@ target_link_libraries(cnn_ncnn PRIVATE ncnn OpenMP::OpenMP_CXX)
 
 add_executable(cnn_ort src/cnn_ort.cpp)
 target_link_libraries(cnn_ort PRIVATE onnxruntime::onnxruntime)
+
+add_executable(cnn_tflite src/cnn_tflite.cpp)
+target_include_directories(cnn_tflite SYSTEM PRIVATE ${TFLITE_INCLUDE_DIR})
+target_link_directories(cnn_tflite PRIVATE ${TFLITE_LIB_DIR})
+target_link_libraries(cnn_tflite PRIVATE -ltensorflow-lite -labsl_log_internal_message
+    -labsl_log_internal_nullguard OpenMP::OpenMP_CXX)
 
 add_executable(cnn_struct src/cnn_struct.cpp)
 target_include_directories(cnn_struct PRIVATE ${OPENBLAS_INCLUDE_DIR})
