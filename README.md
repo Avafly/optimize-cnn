@@ -81,6 +81,14 @@ Examples:
   ./build/cnn_fuse /path/to/data --threads 4 --runs 30
 ```
 
+## Dependencies
+
+|   Library    | Version  |
+| :----------: | :------: |
+| ONNX Runtime |  1.27.1  |
+|     ncnn     | 20260526 |
+|     fmt      |  12.2.1  |
+
 ## References
 
 https://github.com/Avafly/optimize-gemm
