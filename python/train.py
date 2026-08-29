@@ -40,6 +40,53 @@ def logits_of(net, x, chunk=1000):
     return torch.cat([net(x[i:i + chunk]) for i in range(0, len(x), chunk)])
 
 
+def export_tflite(net, x, ref, path):
+    import tensorflow as tf
+    tf.config.set_visible_devices([], "GPU")
+    from tensorflow import keras
+
+    conv1 = keras.layers.Conv2D(C1, 3, padding="same")
+    conv2 = keras.layers.Conv2D(C2, 3, padding="valid")
+    fc = keras.layers.Dense(10)
+    leaky = lambda: keras.layers.LeakyReLU(negative_slope=0.1)
+    pool = lambda: keras.layers.MaxPooling2D(2)
+
+    inp = keras.Input(batch_shape=(1, 28, 28, 1))
+    y = pool()(leaky()(conv1(inp)))
+    y = pool()(leaky()(conv2(y)))
+    model = keras.Model(inp, fc(keras.layers.Flatten()(y)))
+
+    def w(t):
+        return t.detach().numpy()
+
+    # conv: torch OIHW -> keras HWIO
+    conv1.set_weights([w(net.conv1.weight).transpose(2, 3, 1, 0), w(net.conv1.bias)])
+    conv2.set_weights([w(net.conv2.weight).transpose(2, 3, 1, 0), w(net.conv2.bias)])
+    # fc: torch flattens NCHW as (c,h,w) while keras Flatten sees NHWC and gives
+    # (h,w,c), so the 576 input columns are permuted, not just transposed
+    fcw = w(net.fc.weight).reshape(10, C2, 6, 6)
+    fc.set_weights([fcw.transpose(0, 2, 3, 1).reshape(10, FC_IN).T, w(net.fc.bias)])
+
+    flat = tf.lite.TFLiteConverter.from_keras_model(model).convert()
+    with open(path, "wb") as f:
+        f.write(flat)
+
+    # a wrong weight layout still converts and runs, so check the outputs
+    interp = tf.lite.Interpreter(model_content=flat)
+    interp.allocate_tensors()
+    i_idx = interp.get_input_details()[0]["index"]
+    o_idx = interp.get_output_details()[0]["index"]
+    n = 2000
+    got = np.empty((n, 10), dtype=np.float32)
+    for i in range(n):
+        interp.set_tensor(i_idx, x[i:i + 1].numpy().transpose(0, 2, 3, 1))
+        interp.invoke()
+        got[i] = interp.get_tensor(o_idx)
+    err = np.abs(got - ref[:n].numpy()).max()
+    assert err < 1e-3, f"tflite weight layout is wrong: {err}"
+    print(f"tflite max diff {err:.2e}")
+
+
 def train(net, dev, train_loader, test_loader):
     opt = torch.optim.AdamW(net.parameters(), lr=2e-3, weight_decay=5e-4)
     sched = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(opt, T_0=30, T_mult=2)
@@ -129,6 +176,7 @@ def main():
                net.fc.weight, net.fc.bias]
     blob = [t.detach().numpy().astype("<f4").ravel() for t in tensors]
     np.concatenate(blob).tofile(f"{OUT}/model.bin")
+    export_tflite(net, x_all, ref, f"{OUT}/model.tflite")
 
     # 3. save data
     x_all.numpy().astype("<f4", copy=False).tofile(f"{OUT}/images.bin")

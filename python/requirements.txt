@@ -1,0 +1,13 @@
+# python 3.11.
+
+torch==2.13.0
+torchvision==0.28.0
+
+onnx==1.22.0
+onnxoptimizer==0.4.2
+onnxsim==0.7.3
+
+tensorflow==2.20.0
+keras==3.15.1
+
+numpy==2.4.6
